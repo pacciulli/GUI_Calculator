@@ -3,11 +3,6 @@ from tkinter import ttk, END
 import re
 import math
 
-window = tk.Tk()
-
-window.title("Smart Calculator")
-window.minsize(400, 400)
-
 i = 0
 operation_tag = 0
 
@@ -18,7 +13,7 @@ def get_variables(num):
 
     hist = historic_display_string.get()
 
-    if (hist and operation_tag == 1) or display_string.get() == "INF":
+    if (hist and operation_tag == 1) or display_string.get() == "INV":
         update_display(str(num))
         operation_tag = 0
 
@@ -35,11 +30,14 @@ def get_operation(operation):
     hist = historic_display_string.get()
     num = display_string.get()
 
-    if (not hist or re.findall(r"\=\Z", hist)) and display_string.get() == "INF":
-        update_hist_display(num, operation)
+    if num == "INV":
+        clear_display()
 
-    elif display_string.get() == "INF":
-        update_display("")
+    elif not hist and not num:
+        pass
+
+    elif re.findall(r"\=\Z", hist) or (not hist and num):
+        update_hist_display(num, operation)
 
     else:
         to_compute()
@@ -75,16 +73,23 @@ def undo():
         update_display(display_string.get()[:-1])
 
 
-def clear_all():
+def clear_display():
     global i
     display.configure(state="normal")
     display.delete(0, END)
     display.configure(state="disable")
     i = 0
 
+
+def clear_historic_display():
     historic_display.configure(state="normal")
     historic_display.delete(0, END)
     historic_display.configure(state="disable")
+
+
+def clear_all():
+    clear_display()
+    clear_historic_display()
 
 
 def update_display(*args):
@@ -125,17 +130,9 @@ def negative():
             num = int(full_string) * -1
 
         if num > 0:
-            display.configure(state="normal")
-            display.delete(0, END)
-            display.insert(0, num)
-            display.configure(state="disable")
-            i -= 1
+            update_display(str(num))
         else:
-            display.configure(state="normal")
-            display.delete(0, END)
-            display.insert(0, num)
-            display.configure(state="disable")
-            i += 1
+            update_display(str(num))
 
 
 def percent():
@@ -150,11 +147,21 @@ def percent():
 
 
 def invert():
-    pass
+    num = display_string.get()
+
+    if num:
+        try:
+            res = 1 / float(num)
+            update_display(str(res))
+        except ZeroDivisionError:
+            update_display("INV")
+            clear_display()
+    else:
+        update_display("0")
 
 
 def to_compute():
-    global i, operation_tag
+    global operation_tag
 
     num1 = historic_display_string.get()
     num2 = display_string.get()
@@ -172,10 +179,36 @@ def to_compute():
             update_display(str(res))
 
         except ZeroDivisionError:
-            update_display("INF")
-            update_hist_display("")
+            update_display("INV")
+            clear_display()
 
     operation_tag = 1
+
+
+def get_pow():
+    num = display_string.get()
+    if num:
+        full_string = f"math.pow({num}, 2)"
+        res = eval(full_string)
+
+        update_display(str(res))
+    else:
+        update_display("0")
+
+
+def get_sqrt():
+    num = display_string.get()
+
+    if num:
+        full_string = f"math.sqrt({num})"
+        try:
+            res = eval(full_string)
+            update_display(str(res))
+        except ValueError:
+            update_display("INV")
+            clear_historic_display()
+    else:
+        update_display("0")
 
 
 def is_float():
@@ -186,88 +219,98 @@ def is_float():
         return False
 
 
-window.bind("<Key>", key_pressed)
+if __name__ == "__main__":
+    window = tk.Tk()
 
-label = tk.Label(window, text=" ", width=3)
-label.grid(column=0, row=0)
+    window.title("Smart Calculator")
+    window.minsize(400, 400)
 
-historic_display_string = tk.StringVar()
-historic_display = ttk.Entry(
-    window, width=25, textvariable=historic_display_string, state="disable"
-)
-historic_display.grid(column=1, row=0, columnspan=4)
+    window.bind("<Key>", key_pressed)
 
-display_string = tk.StringVar()
-display = ttk.Entry(window, width=25, textvariable=display_string, state="disable")
-display.grid(column=1, row=1, columnspan=4)
+    label = tk.Label(window, text=" ", width=3)
+    label.grid(column=0, row=0)
 
-# Buttons definition and positioning
-# Keypad
-ttk.Button(window, text="0", command=lambda: get_variables(0), width=5).grid(
-    column=2, row=9
-)
-ttk.Button(window, text="1", command=lambda: get_variables(1), width=5).grid(
-    column=1, row=8
-)
-ttk.Button(window, text="2", command=lambda: get_variables(2), width=5).grid(
-    column=2, row=8
-)
-ttk.Button(window, text="3", command=lambda: get_variables(3), width=5).grid(
-    column=3, row=8
-)
-ttk.Button(window, text="4", command=lambda: get_variables(4), width=5).grid(
-    column=1, row=7
-)
-ttk.Button(window, text="5", command=lambda: get_variables(5), width=5).grid(
-    column=2, row=7
-)
-ttk.Button(window, text="6", command=lambda: get_variables(6), width=5).grid(
-    column=3, row=7
-)
-ttk.Button(window, text="7", command=lambda: get_variables(7), width=5).grid(
-    column=1, row=6
-)
-ttk.Button(window, text="8", command=lambda: get_variables(8), width=5).grid(
-    column=2, row=6
-)
-ttk.Button(window, text="9", command=lambda: get_variables(9), width=5).grid(
-    column=3, row=6
-)
-ttk.Button(window, text=".", command=lambda: get_variables("."), width=5).grid(
-    column=3, row=9
-)
+    historic_display_string = tk.StringVar()
+    historic_display = ttk.Entry(
+        window, width=25, textvariable=historic_display_string, state="disable"
+    )
+    historic_display.grid(column=1, row=0, columnspan=4)
 
-# Operations
-ttk.Button(window, text="+/-", command=lambda: negative(), width=5).grid(
-    column=1, row=9
-)
-ttk.Button(window, text="<=", command=lambda: undo(), width=5).grid(column=4, row=4)
-ttk.Button(window, text="C", command=lambda: clear_all(), width=5).grid(column=3, row=4)
-ttk.Button(window, text="+", command=lambda: get_operation("+"), width=5).grid(
-    column=4, row=8
-)
-ttk.Button(window, text="-", command=lambda: get_operation("-"), width=5).grid(
-    column=4, row=7
-)
-ttk.Button(window, text="*", command=lambda: get_operation("*"), width=5).grid(
-    column=4, row=6
-)
-ttk.Button(window, text="/", command=lambda: get_operation("/"), width=5).grid(
-    column=4, row=5
-)
-ttk.Button(window, text="x\u00b2", command=lambda: get_operation("pow"), width=5).grid(
-    column=2, row=5
-)
-ttk.Button(window, text="\u221a", command=lambda: get_operation("sqrt"), width=5).grid(
-    column=3, row=5
-)
-ttk.Button(window, text="1/x", command=lambda: get_operation("inv"), width=5).grid(
-    column=1, row=5
-)
-ttk.Button(window, text="%", command=lambda: percent(), width=5).grid(column=2, row=4)
-ttk.Button(window, text="=", command=lambda: to_compute(), width=5).grid(
-    column=4, row=9
-)
+    display_string = tk.StringVar()
+    display = ttk.Entry(window, width=25, textvariable=display_string, state="disable")
+    display.grid(column=1, row=1, columnspan=4)
 
-# Main loop
-window.mainloop()
+    # Buttons definition and positioning
+    # Keypad
+    ttk.Button(window, text="0", command=lambda: get_variables(0), width=5).grid(
+        column=2, row=9
+    )
+    ttk.Button(window, text="1", command=lambda: get_variables(1), width=5).grid(
+        column=1, row=8
+    )
+    ttk.Button(window, text="2", command=lambda: get_variables(2), width=5).grid(
+        column=2, row=8
+    )
+    ttk.Button(window, text="3", command=lambda: get_variables(3), width=5).grid(
+        column=3, row=8
+    )
+    ttk.Button(window, text="4", command=lambda: get_variables(4), width=5).grid(
+        column=1, row=7
+    )
+    ttk.Button(window, text="5", command=lambda: get_variables(5), width=5).grid(
+        column=2, row=7
+    )
+    ttk.Button(window, text="6", command=lambda: get_variables(6), width=5).grid(
+        column=3, row=7
+    )
+    ttk.Button(window, text="7", command=lambda: get_variables(7), width=5).grid(
+        column=1, row=6
+    )
+    ttk.Button(window, text="8", command=lambda: get_variables(8), width=5).grid(
+        column=2, row=6
+    )
+    ttk.Button(window, text="9", command=lambda: get_variables(9), width=5).grid(
+        column=3, row=6
+    )
+    ttk.Button(window, text=".", command=lambda: get_variables("."), width=5).grid(
+        column=3, row=9
+    )
+
+    # Operations
+    ttk.Button(window, text="+/-", command=lambda: negative(), width=5).grid(
+        column=1, row=9
+    )
+    ttk.Button(window, text="<=", command=lambda: undo(), width=5).grid(column=4, row=4)
+    ttk.Button(window, text="C", command=lambda: clear_all(), width=5).grid(
+        column=3, row=4
+    )
+    ttk.Button(window, text="+", command=lambda: get_operation("+"), width=5).grid(
+        column=4, row=8
+    )
+    ttk.Button(window, text="-", command=lambda: get_operation("-"), width=5).grid(
+        column=4, row=7
+    )
+    ttk.Button(window, text="*", command=lambda: get_operation("*"), width=5).grid(
+        column=4, row=6
+    )
+    ttk.Button(window, text="/", command=lambda: get_operation("/"), width=5).grid(
+        column=4, row=5
+    )
+    ttk.Button(window, text="x\u00b2", command=lambda: get_pow(), width=5).grid(
+        column=2, row=5
+    )
+    ttk.Button(window, text="\u221a", command=lambda: get_sqrt(), width=5).grid(
+        column=3, row=5
+    )
+    ttk.Button(window, text="1/x", command=lambda: invert(), width=5).grid(
+        column=1, row=5
+    )
+    ttk.Button(window, text="%", command=lambda: percent(), width=5).grid(
+        column=2, row=4
+    )
+    ttk.Button(window, text="=", command=lambda: to_compute(), width=5).grid(
+        column=4, row=9
+    )
+
+    # Main loop
+    window.mainloop()
